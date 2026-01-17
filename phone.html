@@ -14,14 +14,25 @@
     }
 
     .value {
-      font-size: 24px;
-      margin: 12px 0;
+      font-size: 20px;
+      margin: 10px 0;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 18px;
+      width: 160px;
+      text-align: center;
+      background: #000;
+      color: #0f0;
+      border: 2px solid #0f0;
+      margin-bottom: 15px;
     }
 
     button {
-      padding: 15px 30px;
+      padding: 14px 28px;
       font-size: 18px;
-      margin-top: 25px;
+      margin: 8px;
     }
   </style>
 </head>
@@ -30,110 +41,61 @@
 
   <h2>📱 Bat Controller</h2>
 
-  <div class="value">
-    Swing Speed: <span id="speed">0</span>
-  </div>
+  <div class="value">Host Code</div>
+  <input id="hostCodeInput" placeholder="ABCD" />
 
-  <div class="value">
-    Direction: <span id="direction">-</span>
-  </div>
-
+  <button onclick="joinGame()">Join Game</button>
   <button onclick="nextBall()">Next Ball</button>
 
+  <!-- Firebase v8 (CORRECT) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
   <script>
-    let lastTime = null;
-    let lastX = 0, lastY = 0, lastZ = 0;
+    // ✅ REAL FIREBASE CONFIG (ALREADY CORRECT)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAdqh7zxww0Jeiq0L8DKBJJf9kPQgIC2U4",
+      authDomain: "cricket-game-fbbf7.firebaseapp.com",
+      databaseURL: "https://cricket-game-fbbf7-default-rtdb.firebaseio.com",
+      projectId: "cricket-game-fbbf7",
+      storageBucket: "cricket-game-fbbf7.appspot.com",
+      messagingSenderId: "66955329321",
+      appId: "1:66955329321:web:e042136e91b2d8cdfcc138"
+    };
 
-    let motionEnabled = false;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    // 🔥 PEAK-AND-HOLD VARIABLES
-    let swingPeak = 0;
-    let swingActive = false;
-
-    function enableMotion() {
-      if (
-        typeof DeviceMotionEvent !== "undefined" &&
-        typeof DeviceMotionEvent.requestPermission === "function"
-      ) {
-        // iOS
-        DeviceMotionEvent.requestPermission()
-          .then(response => {
-            if (response === "granted") {
-              startMotion();
-            } else {
-              alert("Motion permission denied");
-            }
-          })
-          .catch(console.error);
-      } else {
-        // Android
-        startMotion();
+    function joinGame() {
+      const code = document.getElementById("hostCodeInput").value.trim().toUpperCase();
+      if (!code) {
+        alert("Enter Host Code");
+        return;
       }
-    }
 
-    function startMotion() {
-      motionEnabled = true;
-
-      window.addEventListener("devicemotion", (event) => {
-        if (!motionEnabled) return;
-
-        const acc = event.accelerationIncludingGravity;
-        if (!acc) return;
-
-        const now = Date.now();
-
-        if (lastTime === null) {
-          lastTime = now;
-          lastX = acc.x || 0;
-          lastY = acc.y || 0;
-          lastZ = acc.z || 0;
-          return;
-        }
-
-        const dt = (now - lastTime) / 1000;
-        if (dt <= 0) return;
-
-        const dx = acc.x - lastX;
-        const dy = acc.y - lastY;
-        const dz = acc.z - lastZ;
-
-        const speed = Math.sqrt(dx*dx + dy*dy + dz*dz) / dt;
-
-        // 🎯 START SWING
-        if (speed > 8) {
-          swingActive = true;
-          swingPeak = Math.max(swingPeak, speed);
-        }
-
-        // 🛑 END SWING
-        if (swingActive && speed < 3) {
-          swingActive = false;
-
-          document.getElementById("speed").textContent =
-            swingPeak.toFixed(1);
-
-          setTimeout(() => {
-            swingPeak = 0;
-          }, 1000);
-        }
-
-        document.getElementById("direction").textContent =
-          dy > 0 ? "Off-side" : "Leg-side";
-
-        lastX = acc.x;
-        lastY = acc.y;
-        lastZ = acc.z;
-        lastTime = now;
+      // ✅ WRITE WITHOUT OVERWRITING FUTURE DATA
+      db.ref("games/" + code + "/phone").update({
+        joined: true,
+        joinedAt: Date.now()
       });
+
+      alert("Joined " + code);
     }
 
     function nextBall() {
-      if (!motionEnabled) {
-        enableMotion();
-      } else {
-        alert("Next ball triggered (will connect later)");
+      const code = document.getElementById("hostCodeInput").value.trim().toUpperCase();
+      if (!code) {
+        alert("Enter Host Code");
+        return;
       }
+
+      // ✅ USE push() SO EVENT IS ALWAYS DETECTED
+      db.ref("games/" + code + "/events").push({
+        type: "NEXT_BALL",
+        time: Date.now()
+      });
     }
   </script>
 
 </body>
+</html>
